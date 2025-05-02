@@ -1,0 +1,28 @@
+Add Data To Data Lake:
+  - id: 'Create Amplitude Event Table'
+    name: 'Create Amplitude Event Table'
+    description: 'Create Amplitude event table and faltten view in Data Lake'
+  - id: '1.2'
+    name: 'Excel to Data Lake'
+    description: 'Upload Excel sheet/CSV to Data Lake.'
+  - id: '1.3'
+    name: 'CSV to Data Lake'
+    description: 'Upload CSV to Data Lake.'
+
+Check Data Quality:
+  - id: '2.1'
+    name: 'Compare Structure'
+    description: 'Compare the table structure with source back-end table'
+  - id: '2.2'
+    name: 'Comapre Data Count'
+    description: 'Compare the table count with source back-end table'
+
+Check Pipeline Debug:
+  - id: '3.1'
+    name: 'Latest Data Missing'
+    description: 'Latest Data is missing from a table'
+  - id: '3.2'
+    name: 'Past Data Missing'
+    description: 'Latest Data is missing from a table'
+
+

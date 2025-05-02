@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Task {{ task_id }}</title>
+    <style>
+        body {
+            background-color: #e0f7fa;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            width: 50%;
+            margin: auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center; /* Center align text */
+        }
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left; /* Align labels and inputs to the left */
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            color: #ffffff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div style="text-align: right; padding: 10px;">
+        <a href="{{ url_for('logout') }}" style="margin-right: 10px;">Logout</a>
+        <a href="#">Profile</a>
+    </div>
+    <div class="container">
+        <h1>Give parameters for the task <b>{{ task_id }}</b></h1>
+        <form method="post" enctype="multipart/form-data">
+            {% for param in parameters %}
+            <div class="form-group">
+                <label for="{{ param.name }}">{{ param.label }}</label>
+                {% if param.type == 'select' %}
+                <select id="{{ param.name }}" name="{{ param.name }}" required>
+                    {% for option in param.options %}
+                    <option value="{{ option }}">{{ option }}</option>
+                    {% endfor %}
+                </select>
+                {% elif param.type == 'file' %}
+                <input type="file" id="{{ param.name }}" name="{{ param.name }}" required>
+                {% else %}
+                <input type="text" id="{{ param.name }}" name="{{ param.name }}" required>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn">Execute</button>
+        </form>
+    </div>
+</body>
+</html>

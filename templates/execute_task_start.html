@@ -1,0 +1,237 @@
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+    <style>
+        .status {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .status-text {
+            font-weight: bold;
+            font-size: 1.5em;
+        }
+        .running {
+            color: #007bff;
+            animation: blink 1s infinite;
+            font-weight: bold;
+            font-size: 1.5em;
+        }
+        .success {
+            color: green;
+            animation: blink 1s infinite;
+        }
+        .failure {
+            color: red;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        .param-item {
+            display: inline-block;
+            background-color: #e0f7fa;
+            border-radius: 10px;
+            padding: 10px 20px;
+            margin: 10px;
+            color: #007bff;
+            cursor: pointer;
+        }
+        .param-container {
+            text-align: center;
+        }
+        .copy-icon {
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .copy-logs, .copy-output {
+            display: inline-block;
+            padding: 10px 20px;
+            color: #ffffff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        textarea {
+            display: block;
+            margin: 20px auto;
+            width: 80%;
+            box-sizing: border-box;
+        }
+        .output-container {
+            text-align: center;
+            margin-top: 40px; /* Add margin to the top of the output container */
+        }
+        h1 {
+            text-align: center; /* Center align the heading */
+        }
+        .logs-container {
+            text-align: center; /* Center align logs container */
+        }
+        .logs-container h3, .output-container h3 {
+            margin-bottom: 0.5em; /* Reduce margin below heading */
+        }
+        #log, #final-output {
+            background-color: #f0f0f0; /* Set background color to gray */
+            height: 15em; /* Set height to 15 lines */
+            overflow-y: scroll; /* Enable vertical scrolling */
+            display: block; /* Display block to center align */
+            margin: 0 auto; /* Center align the textarea */
+        }
+        .copy-logs, .copy-output {
+            display: block; /* Display block to center align */
+            margin: 10px auto 0 auto; /* Center align the button and add margin */
+        }
+    </style>
+    <script>
+        var initialLogMessage = "Log of task execution will appear here...";
+        var finalOutput = "";
+        var logs = [];
+        var isInitialFetch = true;
+        var fullLogContent = ""; // Variable to keep the full log content
+        var fetchInterval; // Variable to store the interval ID
+        var isTaskCompleted = false; // Variable to track task completion
+        var currentLogs = new Set(); // Set to track unique logs
+
+        function copyLogs() {
+            var log = document.getElementById('log').value;
+            navigator.clipboard.writeText(log).then(function() {
+                alert('Logs copied to clipboard');
+            }, function(err) {
+                alert('Failed to copy logs: ', err);
+            });
+        }
+
+        function copyText(element) {
+            var text = element.innerText;
+            navigator.clipboard.writeText(text).then(function() {
+                alert('Text copied to clipboard');
+            }, function(err) {
+                alert('Failed to copy text: ', err);
+            });
+        }
+
+        function copyFinalOutput() {
+            var output = document.getElementById('final-output').value;
+            navigator.clipboard.writeText(output).then(function() {
+                alert('Output copied to clipboard');
+            }, function(err) {
+                alert('Failed to copy output: ', err);
+            });
+        }
+
+        function updateStatus(isSuccess) {
+            if (isTaskCompleted) return; // Don't update if already completed
+            var statusText = document.getElementById('status-text');
+            statusText.classList.remove('running');
+            if (isSuccess) {
+                statusText.textContent = 'Success';
+                statusText.classList.add('success');
+            } else {
+                statusText.textContent = 'Failure';
+                statusText.classList.add('failure');
+            }
+            isTaskCompleted = true; // Mark task as completed
+            if (fetchInterval) {
+                clearInterval(fetchInterval);
+                fetchInterval = null;
+            }
+        }
+
+        function appendLog(log) {
+            if (isInitialFetch && fullLogContent === initialLogMessage) {
+                fullLogContent = ''; // Clear initial message
+                isInitialFetch = false;
+            }
+            
+            // Only append log if it's not already present
+            if (!currentLogs.has(log)) {
+                currentLogs.add(log);
+                try {
+                    fullLogContent += log + '\n';
+                } catch (e) {
+                    console.error("Error parsing log:", e);
+                    fullLogContent += log + '\n'; // Append raw log if parsing fails
+                }
+                document.getElementById('log').value = fullLogContent;
+                document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+            }
+        }
+
+        function fetchLogs() {
+            if (isTaskCompleted) return; // Don't fetch if task is completed
+            fetch('{{ url_for("get_logs", task_id=task_id) }}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.logs && data.logs.length > 0) {
+                    data.logs.forEach(log => {
+                        appendLog(log);
+                    });
+                }
+                if (data.status) {
+                    updateStatus(data.status === 'Success');
+                }
+                if (data.final_output && data.final_output !== finalOutput) {
+                    document.getElementById('final-output').value = data.final_output;
+                    finalOutput = data.final_output;
+                }
+                // If task is completed, update the log one last time
+                if (data.status === 'Success' || data.status === 'Failure') {
+                    isTaskCompleted = true;
+                    if (fetchInterval) {
+                        clearInterval(fetchInterval);
+                        fetchInterval = null;
+                    }
+                    // Ensure all logs are displayed
+                    document.getElementById('log').value = fullLogContent;
+                    document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching logs:', error);
+                if (fetchInterval) {
+                    clearInterval(fetchInterval);
+                    fetchInterval = null;
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Start fetching logs without resetting
+            setTimeout(function() {
+                fetchLogs(); // Initial fetch
+                fetchInterval = setInterval(fetchLogs, 3000); // Fetch logs every 3 seconds
+            }, 3000);
+        });
+    </script>
+</head>
+<body>
+    <div style="text-align: right; padding: 10px;">
+        <a href="{{ url_for('logout') }}" style="margin-right: 10px;">Logout</a>
+        <a href="#">Profile</a>
+    </div>
+    <h1>Executing Task: <b>{{ task_id }}</b></h1>
+    <div class="param-container">
+        {% for key, value in params.items() %}
+            <div class='param-item' onclick='copyText(this)'>{{ key.replace('_', ' ').title() }}: {{ value }}<span class='copy-icon' onclick='copyText(this.previousSibling)'>📋</span></div>
+        {% endfor %}
+    </div>
+    <div class="status">
+        <b>Execution Status: <span class="status-text running" id="status-text">Running</span></b>
+    </div>
+    <div class="logs-container">
+        <h3>Execution Logs:</h3>
+        <textarea id="log" rows="20" cols="100" readonly>Log of task execution will appear here...</textarea>
+        <button class="copy-logs" onclick="copyLogs()">Copy Logs</button>
+    </div>
+    <div class="output-container">
+        <h3>Final Output:</h3>
+        <textarea id="final-output" rows="10" cols="100" readonly></textarea>
+        <button class="copy-output" onclick="copyFinalOutput()">Copy Output</button>
+    </div>
+</body>
+</html>
