@@ -6,6 +6,9 @@ def get_task_parameters(task_id):
             {'name': 'event_name', 'type': 'text', 'label': 'Event Name'},
             {'name': 'create_view', 'type': 'select', 'label': 'Create Faltten View?', 'options': ['Yes', 'No']},
         ],
+        'Excel to Data Lake': [
+            {'name': 'excel_file', 'type': 'file', 'label': 'Upload Excel File'},
+        ],
         '1.2': [
             {'name': 'param1', 'type': 'select', 'label': 'Parameter 1', 'options': ['Choice A', 'Choice B']},
             {'name': 'param2', 'type': 'text', 'label': 'Parameter 2'}

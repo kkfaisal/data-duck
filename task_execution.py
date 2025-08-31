@@ -6,8 +6,18 @@ from task_workers.amplitude_table_create import create_amplitude_event_table  # 
 def execute_task_function(params,task_fun):
     yield f"Starting execution of task with parameters: {params}"
     
-    # Call the sample task worker and stream its logs
+    # Call the task worker and stream its logs
     final_result = None
+    # For Excel to Data Lake, just pass the file path
+    if 'excel_file' in params:
+        for worker_log in task_fun(params['excel_file']):
+            if isinstance(worker_log, tuple):
+                status, final_result = worker_log
+            else:
+                yield worker_log
+        yield status, final_result or "Final output from Excel to Data Lake"
+        return
+    # Default: pass event_name and create_view
     for worker_log in task_fun(params['event_name'], params['create_view']):
         if isinstance(worker_log, tuple) and worker_log[0] == "result":
             final_result = worker_log[1]
@@ -26,16 +36,23 @@ def execute_task_function(params,task_fun):
 
 
 def stream_task_execution(task_id, params):
+
+    from task_workers.excel_to_datalake import excel_to_datalake
     task_functions = {
-        'Create Amplitude Event Table': create_amplitude_event_table
+        'Create Amplitude Event Table': create_amplitude_event_table,
+        'Excel to Data Lake': excel_to_datalake
         # Add more task mappings as needed
     }
 
     if task_id in task_functions:
         try:
-            # Pass task_fun first, then params
-            for log in execute_task_function(params, task_functions[task_id]):
-                yield log
+            # For Excel to Data Lake, pass only the file path
+            if task_id == 'Excel to Data Lake':
+                for log in execute_task_function({'excel_file': params['excel_file']}, task_functions[task_id]):
+                    yield log
+            else:
+                for log in execute_task_function(params, task_functions[task_id]):
+                    yield log
         except Exception as e:
             yield f"Exception occurred: {str(e)}"
             # Yield a tuple to mark status as Failure and carry final output
